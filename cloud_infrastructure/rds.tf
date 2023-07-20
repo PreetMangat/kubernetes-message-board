@@ -1,23 +1,27 @@
-resource "aws_security_group" "db-sg" {
+##############################################################################
+#                       Security Groups / Subnet Group
+##############################################################################
+
+resource "aws_security_group" "db_sg" {
   vpc_id = aws_vpc.vpc.id
   ingress {
     protocol    = "tcp"
     from_port   = 3306
     to_port     = 3306
-    cidr_blocks = [aws_subnet.public-ca-central-1d-bastion.cidr_block, aws_subnet.private-ca-central-1a.cidr_block, aws_subnet.private-ca-central-1b.cidr_block]
+    cidr_blocks = [aws_subnet.public_ca_central_1d_bastion.cidr_block, aws_subnet.private_ca_central_1a.cidr_block, aws_subnet.private_ca_central_1b.cidr_block]
   }
 }
 
-resource "aws_db_subnet_group" "db-subnet-group" {
+resource "aws_db_subnet_group" "db_subnet_group" {
   name       = "db_subnet_group"
-  subnet_ids = [aws_subnet.private-ca-central-1d-rds.id, aws_subnet.private-ca-central-1b-rds.id]
-
-  tags = {
-    Name = "My DB subnet group"
-  }
+  subnet_ids = [aws_subnet.private_ca_central_1d_rds.id, aws_subnet.private_ca_central_1b_rds.id]
 }
 
-resource "aws_db_instance" "mysql-db" {
+##############################################################################
+#                         Database (MySQL RDS)
+##############################################################################
+
+resource "aws_db_instance" "mysql_db" {
   allocated_storage      = 5
   db_name                = "mydb"
   engine                 = "mysql"
@@ -26,7 +30,6 @@ resource "aws_db_instance" "mysql-db" {
   password               = "foobarbaz"
   skip_final_snapshot    = true
   multi_az               = true
-  db_subnet_group_name   = aws_db_subnet_group.db-subnet-group.name
-  vpc_security_group_ids = [aws_security_group.db-sg.id]
+  db_subnet_group_name   = aws_db_subnet_group.db_subnet_group.name
+  vpc_security_group_ids = [aws_security_group.db_sg.id]
 }
-

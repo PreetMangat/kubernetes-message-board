@@ -1,5 +1,9 @@
-resource "aws_iam_role" "kubernetes-message-board-role" {
-  name = "kubernetes-message-board-role"
+##############################################################################
+#                                IAM
+##############################################################################
+
+resource "aws_iam_role" "eks_cluster_role" {
+  name = "eks_cluster_role"
 
   assume_role_policy = <<POLICY
 {
@@ -17,30 +21,27 @@ resource "aws_iam_role" "kubernetes-message-board-role" {
 POLICY
 }
 
-resource "aws_iam_role_policy_attachment" "kubernetes-message-board-AmazonEKSClusterPolicy" {
+resource "aws_iam_role_policy_attachment" "eks_cluster_AmazonEKSClusterPolicy" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"
-  role       = aws_iam_role.kubernetes-message-board-role.name
+  role       = aws_iam_role.eks_cluster_role.name
 }
 
-variable "cluster_name" {
-  default     = "kubernetes-message-board"
-  type        = string
-  description = "AWS EKS Cluster Name"
-  nullable    = false
-}
+##############################################################################
+#                            EKS Control Plane
+##############################################################################
 
-resource "aws_eks_cluster" "kubernetes-message-board" {
-  name     = var.cluster_name
-  role_arn = aws_iam_role.kubernetes-message-board-role.arn
+resource "aws_eks_cluster" "kubernetes_message_board" {
+  name     = "kubernetes-message-board"
+  role_arn = aws_iam_role.eks_cluster_role.arn
 
   vpc_config {
     subnet_ids = [
-      aws_subnet.private-ca-central-1a.id,
-      aws_subnet.private-ca-central-1b.id,
-      aws_subnet.public-ca-central-1a.id,
-      aws_subnet.public-ca-central-1b.id
+      aws_subnet.private_ca_central_1a.id,
+      aws_subnet.private_ca_central_1b.id,
+      aws_subnet.public_ca_central_1a.id,
+      aws_subnet.public_ca_central_1b.id
     ]
   }
 
-  depends_on = [aws_iam_role_policy_attachment.kubernetes-message-board-AmazonEKSClusterPolicy]
+  depends_on = [aws_iam_role_policy_attachment.eks_cluster_AmazonEKSClusterPolicy]
 }

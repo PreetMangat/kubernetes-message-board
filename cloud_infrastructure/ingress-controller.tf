@@ -1,3 +1,44 @@
+##############################################################################
+#                                IAM / OIDC
+##############################################################################
+
+data "tls_certificate" "eks_oidc_cert" {
+  url = aws_eks_cluster.kubernetes_message_board.identity[0].oidc[0].issuer
+}
+
+resource "aws_iam_openid_connect_provider" "eks" {
+  client_id_list  = ["sts.amazonaws.com"]
+  thumbprint_list = [data.tls_certificate.eks_oidc_cert.certificates[0].sha1_fingerprint]
+  url             = aws_eks_cluster.kubernetes_message_board.identity[0].oidc[0].issuer
+}
+
+resource "aws_iam_role" "aws_load_balancer_controller_role" {
+  name = "aws-load-balancer-controller-role"
+
+  assume_role_policy = <<POLICY
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": ["sts:AssumeRoleWithWebIdentity"],
+      "Condition": {
+        "StringEquals": {
+          "${replace(aws_iam_openid_connect_provider.eks.url, "https://", "")}:sub": "system:serviceaccount:kube-system:aws-load-balancer-controller"
+        }
+      },
+      "Principal": {
+        "Federated": "${aws_iam_openid_connect_provider.eks.arn}"
+      }
+    }
+  ]
+}
+POLICY
+
+
+  inline_policy {
+    name = "aws-load-balancer-controller-policy"
+    policy = <<POLICY
 {
     "Version": "2012-10-17",
     "Statement": [
@@ -210,4 +251,58 @@
             "Resource": "*"
         }
     ]
+}
+POLICY
+
+  }
+}
+
+##############################################################################
+#                                Helm Chart
+##############################################################################
+
+provider "helm" {
+  kubernetes {
+    host                   = aws_eks_cluster.kubernetes_message_board.endpoint
+    cluster_ca_certificate = base64decode(aws_eks_cluster.kubernetes_message_board.certificate_authority[0].data)
+    exec {
+      api_version = "client.authentication.k8s.io/v1beta1"
+      args        = ["eks", "get-token", "--cluster-name", aws_eks_cluster.kubernetes_message_board.id]
+      command     = "aws"
+    }
+  }
+}
+
+resource "helm_release" "aws_load_balancer_controller" {
+  name = "aws-load-balancer-controller"
+
+  repository = "https://aws.github.io/eks-charts"
+  chart      = "aws-load-balancer-controller"
+  namespace  = "kube-system"
+  version    = "1.4.1"
+
+  set {
+    name  = "clusterName"
+    value = aws_eks_cluster.kubernetes_message_board.id
+  }
+
+  set {
+    name  = "image.tag"
+    value = "v2.4.2"
+  }
+
+  set {
+    name  = "serviceAccount.name"
+    value = "aws-load-balancer-controller"
+  }
+
+  set {
+    name  = "serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn"
+    value = aws_iam_role.aws_load_balancer_controller_role.arn
+  }
+
+  depends_on = [
+    aws_eks_node_group.private_nodes,
+    aws_iam_role.aws_load_balancer_controller_role
+  ]
 }
