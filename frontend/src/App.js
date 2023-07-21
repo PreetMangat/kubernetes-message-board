@@ -7,7 +7,7 @@ function App() {
   const [newMessage, setNewMessage] = useState('');
 
   useEffect(() => {
-    axios.get('http://api-service:5000/messages')
+    axios.get('http://kubernetes-message-board.preetmangatresume.com/messages')
       .then(response => {
         setMessages(response.data);
       })
@@ -19,7 +19,7 @@ function App() {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (newMessage.trim() !== '') {
-      axios.post('http://api-service:5000/messages', { content: newMessage })
+      axios.post('http://kubernetes-message-board.preetmangatresume.com/messages', { content: newMessage })
         .then(response => {
           setMessages([...messages, response.data]);
           setNewMessage('');
@@ -31,7 +31,7 @@ function App() {
   };
 
   const handleDelete = (messageId) => {
-    axios.delete(`http://api-service:5000/messages/${messageId}`)
+    axios.delete(`http://kubernetes-message-board.preetmangatresume.com/messages/${messageId}`)
       .then(() => {
         setMessages(messages.filter(message => message.id !== messageId));
       })

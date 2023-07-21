@@ -37,7 +37,7 @@ POLICY
 
 
   inline_policy {
-    name = "aws-load-balancer-controller-policy"
+    name   = "aws-load-balancer-controller-policy"
     policy = <<POLICY
 {
     "Version": "2012-10-17",
@@ -258,7 +258,7 @@ POLICY
 }
 
 ##############################################################################
-#                                Helm Chart
+#                                Controller
 ##############################################################################
 
 provider "helm" {
@@ -305,4 +305,69 @@ resource "helm_release" "aws_load_balancer_controller" {
     aws_eks_node_group.private_nodes,
     aws_iam_role.aws_load_balancer_controller_role
   ]
+}
+
+##############################################################################
+#                                Ingress Rules
+##############################################################################
+
+provider "kubernetes" {
+  host                   = aws_eks_cluster.kubernetes_message_board.endpoint
+  cluster_ca_certificate = base64decode(aws_eks_cluster.kubernetes_message_board.certificate_authority[0].data)
+  exec {
+    api_version = "client.authentication.k8s.io/v1beta1"
+    args        = ["eks", "get-token", "--cluster-name", aws_eks_cluster.kubernetes_message_board.id]
+    command     = "aws"
+  }
+}
+
+resource "kubernetes_ingress_v1" "kubernetes-message-board-ingress" {
+  wait_for_load_balancer = true
+  metadata {
+    name = "kubernetes-message-board-ingress"
+    annotations = {
+      "alb.ingress.kubernetes.io/scheme"      = "internet-facing"
+      "alb.ingress.kubernetes.io/target-type" = "ip"
+    }
+  }
+
+  spec {
+    ingress_class_name = "alb"
+    default_backend {
+      service {
+        name = "frontend-service"
+        port {
+          number = 80
+        }
+      }
+    }
+
+    rule {
+      http {
+        path {
+          path      = "/messages"
+          path_type = "Prefix"
+          backend {
+            service {
+              name = "api-service"
+              port {
+                number = 5000
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  depends_on = [helm_release.aws_load_balancer_controller]
+}
+
+resource "aws_route53_record" "example" {
+  zone_id    = ""
+  name       = "kubernetes-message-board.preetmangatresume.com"
+  type       = "CNAME"
+  ttl        = "600"
+  records    = [kubernetes_ingress_v1.kubernetes-message-board-ingress.status.0.load_balancer.0.ingress.0.hostname]
+  depends_on = [kubernetes_ingress_v1.kubernetes-message-board-ingress]
 }

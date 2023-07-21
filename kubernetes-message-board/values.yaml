@@ -1,0 +1,11 @@
+deployment:
+  frontend:
+    image: placeholder
+    image: placeholder
+
+secret:
+  mysql:
+    host: placeholder
+    user: placeholder
+    password: placeholder
+    database: placerholder
