@@ -364,7 +364,7 @@ resource "kubernetes_ingress_v1" "kubernetes-message-board-ingress" {
 }
 
 resource "aws_route53_record" "example" {
-  zone_id    = ""
+  zone_id    = var.hosted_zone_id
   name       = "kubernetes-message-board.preetmangatresume.com"
   type       = "CNAME"
   ttl        = "600"

@@ -23,11 +23,11 @@ resource "aws_db_subnet_group" "db_subnet_group" {
 
 resource "aws_db_instance" "mysql_db" {
   allocated_storage      = 5
-  db_name                = "mydb"
+  db_name                = var.db_name
   engine                 = "mysql"
   instance_class         = "db.t3.micro"
-  username               = "foo"
-  password               = "foobarbaz"
+  username               = var.db_username
+  password               = var.db_password
   skip_final_snapshot    = true
   multi_az               = true
   db_subnet_group_name   = aws_db_subnet_group.db_subnet_group.name
