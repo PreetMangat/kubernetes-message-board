@@ -6,7 +6,10 @@ deployment:
 
 secret:
   mysql:
-    host: placeholder
     user: placeholder
     password: placeholder
     database: placerholder
+
+config:
+  mysql:
+    host: placeholder

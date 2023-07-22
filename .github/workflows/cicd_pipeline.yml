@@ -16,7 +16,8 @@ jobs:
     name: Provision Infrastructure
     runs-on: ubuntu-latest
     outputs:
-      MYSQL_DB_ENDPOINT: ${{ steps.set-outputs.outputs.rds-endpoint }}
+      MYSQL_DB_ENDPOINT: ${{ steps.set-outputs.outputs.RDS_ENDPOINT }}
+      
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v3
@@ -47,8 +48,9 @@ jobs:
             -var "hosted_zone_id=${{ secrets.HOSTED_ZONE_ID }}"
       
       - name: Set Outputs
+        working-directory: cloud_infrastructure
         id: set-outputs
-        run: echo "RDS_ENDPOINT=$(terraform output -raw rds_endpoint)"
+        run: echo "RDS_ENDPOINT=$(terraform output -raw rds_endpoint)" >> "$GITHUB_OUTPUT"
     
   build-docker-images:
     name: Build Docker Images
