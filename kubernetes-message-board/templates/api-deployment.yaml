@@ -22,7 +22,7 @@ spec:
           - name: DB_HOST_NAME
             valueFrom:
               configMapKeyRef:
-                name: mysql-config
+                name: mysql-configmap
                 key: host
           - name: DB_USER
             valueFrom:

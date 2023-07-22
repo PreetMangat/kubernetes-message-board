@@ -50,7 +50,7 @@ jobs:
       - name: Set Outputs
         working-directory: cloud_infrastructure
         id: set-outputs
-        run: echo "RDS_ENDPOINT=$(terraform output -raw rds_endpoint)" >> "$GITHUB_OUTPUT"
+        run: echo "RDS_ENDPOINT=$(terraform output -raw rds_endpoint | cut -d':' -f1)" >> "$GITHUB_OUTPUT"
     
   build-docker-images:
     name: Build Docker Images
