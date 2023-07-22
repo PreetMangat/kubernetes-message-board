@@ -12,36 +12,36 @@ env:
 
 jobs:
   
-  # provision-infrastructure:
-  #   name: Provision Infrastructure
-  #   runs-on: ubuntu-latest
+  provision-infrastructure:
+    name: Provision Infrastructure
+    runs-on: ubuntu-latest
 
-  #   steps:
-  #     - name: Checkout Repo
-  #       uses: actions/checkout@v3
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v3
 
-  #     - name: Install Terraform
-  #       uses: hashicorp/setup-terraform@v1
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@v1
 
-  #     - name: Configure AWS credentials
-  #       uses: aws-actions/configure-aws-credentials@v1
-  #       with:
-  #         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-  #         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-  #         aws-region: ${{ env.AWS_REGION }}
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
       
-  #     - name: Initialize Terraform
-  #       working-directory: cloud_infrastructure
-  #       run: terraform init
+      - name: Initialize Terraform
+        working-directory: cloud_infrastructure
+        run: terraform init
       
-  #     - name: Apply Terraform
-  #       working-directory: cloud_infrastructure
-  #       run: |
-  #         terraform apply -auto-approve \
-  #           -var "db_name=${{ secrets.MYSQL_DB_NAME }}" \
-  #           -var "db_username=${{ secrets.MYSQL_DB_USERNAME }}" \
-  #           -var "db_password=${{ secrets.MYSQL_DB_PASSWORD}}" \
-  #           -var "hosted_zone_id=${{ secrets.HOSTED_ZONE_ID }}"
+      - name: Apply Terraform
+        working-directory: cloud_infrastructure
+        run: |
+          terraform apply -auto-approve \
+            -var "db_name=${{ secrets.MYSQL_DB_NAME }}" \
+            -var "db_username=${{ secrets.MYSQL_DB_USERNAME }}" \
+            -var "db_password=${{ secrets.MYSQL_DB_PASSWORD}}" \
+            -var "hosted_zone_id=${{ secrets.HOSTED_ZONE_ID }}"
     
   build-docker-images:
     name: Build Docker Images
@@ -77,6 +77,38 @@ jobs:
         run: |
           docker build -t $PRIVATE_ECR/kubernetes-message-board:api-latest .
           docker push $PRIVATE_ECR/kubernetes-message-board:api-latest
+    
+  install-helm-chart:
+    needs: [provision-infrastructure, build-docker-images]
+    name: Install Helm Chart
+    runs-on: ubuntu-latest
 
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v3
       
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
       
+      - name: Install dependencies
+        run: |
+          sudo apt install snap -y 
+          sudo snap install kubectl --classic 
+          sudo snap install helm --classic
+
+      - name: Update local kubeconfig
+        run: aws eks update-kubeconfig --name kubernetes-message-board
+      
+      - name: Install Helm Chart to Cluster
+        run: |
+          helm install test-release kubernetes-message-board \
+            --set "deployment.frontend.image=${{ secrets.PRIVATE_ECR }}:frontend-latest" \
+            --set "deployment.api.image=${{ secrets.PRIVATE_ECR }}:api-latest" \
+            --set "secret.mysql.host=${{ needs.provision-infrastructure.outputs.rds-endpoint }}" \
+            --set "secret.mysql.user=${{ secrets.MYSQL_DB_USERNAME }}" \
+            --set "secret.mysql.password=${{ secrets.MYSQL_DB_PASSWORD }}" \
+            --set "secret.mysql.database=${{ secrets.MYSQL_DB_NAME }}"

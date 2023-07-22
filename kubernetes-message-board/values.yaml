@@ -1,6 +1,7 @@
 deployment:
   frontend:
     image: placeholder
+  api:
     image: placeholder
 
 secret:
