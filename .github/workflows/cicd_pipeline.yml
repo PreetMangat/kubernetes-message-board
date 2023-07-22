@@ -114,10 +114,10 @@ jobs:
       
       - name: Install Helm Chart to Cluster
         run: |
-          helm install test-release kubernetes-message-board \
+          helm upgrade --install test-release kubernetes-message-board \
             --set "deployment.frontend.image=${{ secrets.PRIVATE_ECR }}:frontend-latest" \
             --set "deployment.api.image=${{ secrets.PRIVATE_ECR }}:api-latest" \
-            --set "secret.mysql.host=${{ needs.provision-infrastructure.outputs.MYSQL_DB_ENDPOINT }}" \
+            --set "config.mysql.host=${{ needs.provision-infrastructure.outputs.MYSQL_DB_ENDPOINT }}" \
             --set "secret.mysql.user=${{ secrets.MYSQL_DB_USERNAME }}" \
             --set "secret.mysql.password=${{ secrets.MYSQL_DB_PASSWORD }}" \
             --set "secret.mysql.database=${{ secrets.MYSQL_DB_NAME }}"
