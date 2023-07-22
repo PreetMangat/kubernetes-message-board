@@ -15,13 +15,16 @@ jobs:
   provision-infrastructure:
     name: Provision Infrastructure
     runs-on: ubuntu-latest
-
+    outputs:
+      MYSQL_DB_ENDPOINT: ${{ steps.set-outputs.outputs.rds-endpoint }}
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v3
 
       - name: Install Terraform
         uses: hashicorp/setup-terraform@v1
+        with:
+          terraform_wrapper: false
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
@@ -42,6 +45,10 @@ jobs:
             -var "db_username=${{ secrets.MYSQL_DB_USERNAME }}" \
             -var "db_password=${{ secrets.MYSQL_DB_PASSWORD}}" \
             -var "hosted_zone_id=${{ secrets.HOSTED_ZONE_ID }}"
+      
+      - name: Set Outputs
+        id: set-outputs
+        run: echo "RDS_ENDPOINT=$(terraform output -raw rds_endpoint)"
     
   build-docker-images:
     name: Build Docker Images
@@ -108,7 +115,7 @@ jobs:
           helm install test-release kubernetes-message-board \
             --set "deployment.frontend.image=${{ secrets.PRIVATE_ECR }}:frontend-latest" \
             --set "deployment.api.image=${{ secrets.PRIVATE_ECR }}:api-latest" \
-            --set "secret.mysql.host=${{ needs.provision-infrastructure.outputs.rds-endpoint }}" \
+            --set "secret.mysql.host=${{ needs.provision-infrastructure.outputs.MYSQL_DB_ENDPOINT }}" \
             --set "secret.mysql.user=${{ secrets.MYSQL_DB_USERNAME }}" \
             --set "secret.mysql.password=${{ secrets.MYSQL_DB_PASSWORD }}" \
             --set "secret.mysql.database=${{ secrets.MYSQL_DB_NAME }}"
