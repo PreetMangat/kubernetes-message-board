@@ -19,37 +19,39 @@ def get_database_connection():
 
 @app.route('/messages', methods=['GET'])
 def get_messages():
-    connection = get_database_connection()
-    cursor = connection.cursor()
-    cursor.execute('SELECT * FROM messages')
-    result = cursor.fetchall()
-    messages = [{'id': row[0], 'content': row[1]} for row in result]
-    cursor.close()
-    connection.close()
-    return jsonify(messages)
+    try:
+        with get_database_connection() as connection, connection.cursor() as cursor:
+            cursor.execute('SELECT * FROM messages')
+            result = cursor.fetchall()
+            messages = [{'id': row[0], 'content': row[1]} for row in result]
+            return jsonify(messages), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/messages', methods=['POST'])
 def create_message():
-    content = request.json['content']
+    content = request.json.get('content')
+    if not content:
+        return jsonify({'error': 'Content is missing'}), 400
 
-    connection = get_database_connection()
-    cursor = connection.cursor()
-    cursor.execute('INSERT INTO messages (content) VALUES (%s)', (content,))
-    connection.commit()
-    message_id = cursor.lastrowid
-    cursor.close()
-    connection.close()
-    return jsonify({'id': message_id, 'content': content}), 201
+    try:
+        with get_database_connection() as connection, connection.cursor() as cursor:
+            cursor.execute('INSERT INTO messages (content) VALUES (%s)', (content,))
+            connection.commit()
+            message_id = cursor.lastrowid
+            return jsonify({'id': message_id, 'content': content}), 201
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/messages/<int:message_id>', methods=['DELETE'])
 def delete_message(message_id):
-    connection = get_database_connection()
-    cursor = connection.cursor()
-    cursor.execute('DELETE FROM messages WHERE id = %s', (message_id,))
-    connection.commit()
-    cursor.close()
-    connection.close()
-    return jsonify({'message': 'Message deleted'})
+    try:
+        with get_database_connection() as connection, connection.cursor() as cursor:
+            cursor.execute('DELETE FROM messages WHERE id = %s', (message_id,))
+            connection.commit()
+            return jsonify({'message': 'Message deleted'}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=5000)

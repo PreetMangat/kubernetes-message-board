@@ -10,7 +10,7 @@
   - Helm Chart
   - CI/CD Pipeline
 
-- Technologies used: Kubernetes, Helm, AWS, Terraform, Docker, Github Actions, JavaScript (ReactJS), Python (Flask), MySQL  
+- Technologies used: Kubernetes, Helm, AWS, Terraform, Docker, Github Actions, JavaScript (ReactJS), Python (Flask), MySQL, nginx
 
 - AWS services used: EKS, ECR, VPC, Subnets, DynamoDB, ALB, RDS, EC2, S3, Route53, IGW, NATGW, SG, Route Tables
 
@@ -21,7 +21,7 @@
 #### Notes
 
 - The web application can be broken down into 3 tiers
-  - The frontend tier runs in the "frontend pods" in the EKS cluster. This tier consists of a React application that presents the message board UI to the user.
+  - The frontend tier runs in the "frontend pods" in the EKS cluster. This tier consists of a React application running on an nginx web server, that presents the message board UI to the user.
   - The api tier runs in the "api pods" in the EKS cluster. This tier is a Flask application that directs traffic between the frontend and database tiers.
   - the database tier, which runs outside of the EKS cluster. The tier is a multi-AZ MySQL RDS database that contains user messages.
     
@@ -76,3 +76,6 @@
 - Bastion host is a potential single point of failure, as it's only provisioned in one subnet in one availability zone and is needed to configure the MySQL database.
 - Docker images are tagged as "latest", this makes it hard to roll back to previous images if needed.
 - Helm Chart versions are not being incremented on subsequent code pushes.
+- Use a web server to serve the API tier, currently it's being run on the default Flask web server using app.run()
+- Add monitoring using something like Prometheus and Grafana.
+- Build a more robust CI/CD pipeline that includes testing, code analysis, image scans, etc.
